@@ -1,0 +1,240 @@
+# Video-AI Configuration File
+
+# API配置
+api:
+  openai:
+    api_key: "${OPENAI_API_KEY}"
+    model: "gpt-4-turbo-preview"
+    whisper_model: "whisper-1"
+
+  google:
+    api_key: "${GOOGLE_API_KEY}"
+    model: "gemini-pro"
+
+  anthropic:
+    api_key: "${ANTHROPIC_API_KEY}"
+    model: "claude-3-sonnet-20240229"
+
+# 视频处理配置
+video:
+  # 支持的输入格式
+  supported_formats:
+    - "mp4"
+    - "avi"
+    - "mov"
+    - "mkv"
+    - "webm"
+
+  # 输出配置
+  output:
+    format: "mp4"
+    codec: "libx264"
+    audio_codec: "aac"
+    quality: "high"  # low, medium, high, ultra
+    resolution: "1080p"  # 720p, 1080p, 1440p, 2160p
+
+  # 转码参数
+  encoding:
+    crf: 23  # 质量参数 (0-51, 越小质量越好)
+    preset: "medium"  # ultrafast, fast, medium, slow, veryslow
+    audio_bitrate: "128k"
+
+# 转录配置
+transcription:
+  engine: "whisper"  # whisper, google, azure
+  model: "base"  # tiny, base, small, medium, large
+  language: "zh"  # 自动检测设为 "auto"
+
+  # Whisper特定配置
+  whisper:
+    device: "cuda"  # cuda, cpu
+    compute_type: "float16"  # float16, int8
+    beam_size: 5
+    best_of: 5
+    temperature: 0.0
+
+# 内容分析配置
+analysis:
+  # 关键词提取
+  keyword_extraction:
+    method: "tfidf"  # tfidf, textrank, rake
+    top_n: 20
+
+  # 情感分析
+  sentiment_analysis:
+    enabled: true
+    model: "sentiment-analysis"
+
+  # 主题识别
+  topic_modeling:
+    enabled: true
+    num_topics: 5
+    method: "lda"  # lda, nmf
+
+# 个性化配置
+personalization:
+  # 用户兴趣模型
+  user_profile:
+    update_frequency: "daily"  # realtime, hourly, daily
+    history_length: 100  # 保留最近N个视频的观看记录
+
+  # 推荐算法
+  recommendation:
+    algorithm: "hybrid"  # collaborative, content_based, hybrid
+    weights:
+      collaborative: 0.4
+      content_based: 0.6
+
+  # 内容过滤
+  content_filter:
+    min_segment_duration: 5  # 最小片段时长（秒）
+    max_segments: 50  # 最大片段数
+    relevance_threshold: 0.6  # 相关性阈值 (0-1)
+
+# 剪辑配置
+editing:
+  # 剪辑策略
+  strategy: "intelligent"  # simple, intelligent, aggressive
+
+  # 目标时长
+  target_duration:
+    mode: "percentage"  # percentage, absolute
+    value: 30  # 如果是percentage，表示保留30%；如果是absolute，表示N秒
+
+  # 静音检测
+  silence_detection:
+    enabled: true
+    threshold: -40  # dB
+    min_duration: 1.0  # 秒
+
+  # 场景检测
+  scene_detection:
+    enabled: true
+    threshold: 30.0  # 场景变化阈值
+    min_scene_len: 15  # 最小场景长度（帧）
+
+# 过渡生成配置
+transition:
+  # 过渡类型
+  type: "text"  # text, simple, ai_generated
+
+  # 文字过渡
+  text:
+    duration: 2.0  # 秒
+    font: "Arial"
+    font_size: 48
+    color: "white"
+    background: "black"
+    template: "第{index}部分: {topic}"
+
+  # AI生成过渡
+  ai_generated:
+    enabled: false  # 阶段二功能
+    model: "stable-diffusion-xl"
+    steps: 20
+    guidance_scale: 7.5
+
+# 叙事排序配置
+narrative:
+  # 排序算法
+  algorithm: "semantic"  # chronological, semantic, importance
+
+  # 语义相似度
+  semantic:
+    model: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    threshold: 0.7
+
+  # 重要性评分
+  importance:
+    factors:
+      keyword_density: 0.3
+      speaker_emotion: 0.2
+      visual_complexity: 0.2
+      audio_energy: 0.3
+
+# 缓存配置
+cache:
+  enabled: true
+  backend: "disk"  # memory, disk, redis
+  ttl: 86400  # 缓存时间（秒）
+  max_size: "10GB"  # 最大缓存大小
+
+# 日志配置
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
+
+  # 文件输出
+  file:
+    enabled: true
+    path: "logs/video-ai.log"
+    rotation: "100 MB"
+    retention: "30 days"
+
+  # 控制台输出
+  console:
+    enabled: true
+    colorize: true
+
+# 性能配置
+performance:
+  # 多线程
+  threading:
+    max_workers: 4
+
+  # GPU加速
+  gpu:
+    enabled: true
+    device_id: 0
+
+  # 批处理
+  batch:
+    enabled: true
+    size: 8
+
+# 数据库配置（可选）
+database:
+  enabled: false
+  type: "mongodb"  # postgresql, mongodb, mysql
+
+  mongodb:
+    uri: "mongodb://localhost:27017"
+    database: "video_ai"
+    collections:
+      users: "users"
+      videos: "videos"
+      profiles: "user_profiles"
+
+# Web服务配置
+web:
+  # API服务
+  api:
+    host: "0.0.0.0"
+    port: 8000
+    reload: false
+    workers: 1
+
+  # Streamlit界面
+  streamlit:
+    port: 8501
+    theme: "dark"
+
+# 实验性功能
+experimental:
+  # 实时处理
+  realtime_processing: false
+
+  # 多语言支持
+  multilingual: true
+
+  # 高级AI过渡
+  advanced_transitions: false
+
+# 默认用户配置模板
+default_user_config:
+  interests: []
+  skip_topics: ["广告", "推广"]
+  pace: "normal"  # slow, normal, fast
+  transition_style: "text"  # text, simple, ai_generated
+  language: "zh-CN"
+  output_length: "medium"  # short (30%), medium (50%), long (70%)
