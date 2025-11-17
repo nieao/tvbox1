@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: video-ai-api
+  namespace: video-ai
+  labels:
+    app: video-ai
+  annotations:
+    description: "Video-AI API Service"
+spec:
+  type: LoadBalancer
+  selector:
+    app: video-ai
+    component: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 8000
+      protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: video-ai-api-internal
+  namespace: video-ai
+  labels:
+    app: video-ai
+spec:
+  type: ClusterIP
+  selector:
+    app: video-ai
+    component: api
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+    - name: metrics
+      port: 8001
+      targetPort: 8001
+      protocol: TCP

@@ -1,0 +1,19 @@
+{
+  "user_id": "user_016",
+  "video_id": "video_0053",
+  "feedback_type": "segment_quality",
+  "rating": 2.6,
+  "segment_id": null,
+  "comment": null,
+  "timestamp": "2025-10-20T12:35:09.715961",
+  "user_interests": [
+    "教育",
+    "科学",
+    "研究"
+  ],
+  "used_strategy": "semantic",
+  "video_metadata": {
+    "compression_ratio": 0.5208990462577082,
+    "segments_count": 9
+  }
+}

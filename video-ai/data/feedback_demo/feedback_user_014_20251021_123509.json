@@ -1,0 +1,19 @@
+{
+  "user_id": "user_014",
+  "video_id": "video_0002",
+  "feedback_type": "segment_quality",
+  "rating": 4.4,
+  "segment_id": null,
+  "comment": null,
+  "timestamp": "2025-10-21T12:35:09.704514",
+  "user_interests": [
+    "AI",
+    "编程",
+    "技术"
+  ],
+  "used_strategy": "interest_based",
+  "video_metadata": {
+    "compression_ratio": 0.44764973920000156,
+    "segments_count": 6
+  }
+}

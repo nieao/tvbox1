@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video-AI 设置</title>
+  <link rel="stylesheet" href="styles/popup.css">
+  <link rel="stylesheet" href="styles/options.css">
+</head>
+<body class="options-page">
+  <div class="container">
+    <div class="header">
+      <h1>🎬 Video-AI 设置</h1>
+      <p class="subtitle">配置您的个性化视频编辑参数</p>
+    </div>
+
+    <div id="welcomeMessage" class="welcome-section hidden">
+      <h2>👋 欢迎使用 Video-AI</h2>
+      <p>感谢您安装 Video-AI 扩展插件！为了开始使用，请先配置 API Token 和您的偏好设置。</p>
+    </div>
+
+    <div class="content">
+      <div class="sidebar">
+        <div class="nav-item active" data-tab="account">
+          <span class="icon">🔑</span>
+          <span class="label">账户设置</span>
+        </div>
+        <div class="nav-item" data-tab="preferences">
+          <span class="icon">⚙️</span>
+          <span class="label">偏好设置</span>
+        </div>
+        <div class="nav-item" data-tab="advanced">
+          <span class="icon">🔧</span>
+          <span class="label">高级选项</span>
+        </div>
+        <div class="nav-item" data-tab="about">
+          <span class="icon">ℹ️</span>
+          <span class="label">关于</span>
+        </div>
+      </div>
+
+      <div class="settings-panel">
+        <!-- 账户设置 -->
+        <div id="accountTab" class="tab-content active">
+          <h2>账户设置</h2>
+
+          <div class="form-group">
+            <label for="apiToken">API Token</label>
+            <input
+              type="password"
+              id="apiToken"
+              class="input-field"
+              placeholder="输入您的 API Token"
+            >
+            <small class="help-text">
+              获取 Token:
+              <a href="https://console.video-ai.com/api-keys" target="_blank">
+                进入控制面板
+              </a>
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="userId">用户 ID</label>
+            <input
+              type="text"
+              id="userId"
+              class="input-field"
+              placeholder="您的用户 ID"
+              disabled
+            >
+            <small class="help-text">从您的账户页面自动获取</small>
+          </div>
+
+          <div class="form-group">
+            <button id="testConnectionBtn" class="btn btn-secondary">
+              🔗 测试连接
+            </button>
+            <div id="connectionStatus" class="hidden"></div>
+          </div>
+        </div>
+
+        <!-- 偏好设置 -->
+        <div id="preferencesTab" class="tab-content hidden">
+          <h2>偏好设置</h2>
+
+          <div class="form-group">
+            <label for="interests">兴趣标签</label>
+            <textarea
+              id="interests"
+              class="textarea-field"
+              placeholder="输入您感兴趣的话题（用逗号分隔）&#10;例如: AI, 机器学习, Python, 数据科学"
+            ></textarea>
+            <small class="help-text">
+              这些标签将用于个性化视频编辑，帮助系统识别您最感兴趣的内容片段。
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="outputLength">默认输出长度</label>
+            <select id="outputLength" class="select-field">
+              <option value="short">短 (30% 原视频长度)</option>
+              <option value="medium" selected>中 (50% 原视频长度)</option>
+              <option value="long">长 (70% 原视频长度)</option>
+            </select>
+            <small class="help-text">选择处理后视频的目标长度</small>
+          </div>
+
+          <div class="form-group">
+            <label for="language">语言</label>
+            <select id="language" class="select-field">
+              <option value="zh-CN" selected>中文 (简体)</option>
+              <option value="zh-TW">中文 (繁體)</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 高级选项 -->
+        <div id="advancedTab" class="tab-content hidden">
+          <h2>高级选项</h2>
+
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="autoDownload">
+              处理完成后自动下载视频
+            </label>
+            <small class="help-text">
+              启用此选项后，处理完成的视频将自动下载到您的默认下载文件夹。
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="enableNotifications">
+              启用桌面通知
+            </label>
+            <small class="help-text">
+              当视频处理完成时显示桌面通知。
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="saveHistory">
+              保存处理历史
+            </label>
+            <small class="help-text">
+              记录已处理的视频，方便查看历史记录。
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="cacheDays">缓存过期时间（天）</label>
+            <input
+              type="number"
+              id="cacheDays"
+              class="input-field"
+              min="1"
+              max="90"
+              placeholder="30"
+            >
+            <small class="help-text">清理超过此天数的缓存数据</small>
+          </div>
+
+          <div class="form-group">
+            <button id="clearCacheBtn" class="btn btn-danger">
+              🗑️ 清除缓存
+            </button>
+            <div id="cacheStatus" class="hidden"></div>
+          </div>
+
+          <div class="form-group">
+            <button id="exportSettingsBtn" class="btn btn-secondary">
+              💾 导出设置
+            </button>
+            <button id="importSettingsBtn" class="btn btn-secondary">
+              📂 导入设置
+            </button>
+            <input
+              type="file"
+              id="importFile"
+              accept=".json"
+              style="display: none;"
+            >
+          </div>
+        </div>
+
+        <!-- 关于 -->
+        <div id="aboutTab" class="tab-content hidden">
+          <h2>关于 Video-AI</h2>
+
+          <div class="info-box">
+            <h3>🎬 Video-AI 浏览器扩展</h3>
+            <p><strong>版本:</strong> <span id="version">1.0.0</span></p>
+            <p><strong>开发者:</strong> Video-AI Team</p>
+            <p><strong>许可证:</strong> MIT</p>
+
+            <h4>功能</h4>
+            <ul>
+              <li>✅ YouTube 视频一键智能剪辑</li>
+              <li>✅ 基于个人兴趣的内容推荐</li>
+              <li>✅ 多种输出长度选择</li>
+              <li>✅ 跨浏览器支持（Chrome, Firefox, Edge）</li>
+            </ul>
+
+            <h4>有用链接</h4>
+            <ul>
+              <li>
+                <a href="https://github.com/your-repo" target="_blank">
+                  GitHub 仓库
+                </a>
+              </li>
+              <li>
+                <a href="https://docs.video-ai.com" target="_blank">
+                  官方文档
+                </a>
+              </li>
+              <li>
+                <a href="https://github.com/your-repo/issues" target="_blank">
+                  报告问题
+                </a>
+              </li>
+              <li>
+                <a href="https://github.com/your-repo/discussions" target="_blank">
+                  讨论社区
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button id="saveBtn" class="btn btn-primary">
+        ✅ 保存设置
+      </button>
+      <button id="resetBtn" class="btn btn-secondary">
+        ↻ 恢复默认
+      </button>
+      <span id="saveStatus" class="save-status hidden"></span>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+/**
+ * Video-AI Browser Extension - Content Script Styles
+ * YouTube 页面中的样式注入
+ */
+
+/* ========================================
+   Video-AI 按钮样式
+   ======================================== */
+
+#videoai-btn {
+  display: inline-block !important;
+  padding: 0 6px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  color: #fff !important;
+  font-size: 18px !important;
+  transition: opacity 0.3s ease !important;
+}
+
+#videoai-btn:hover {
+  opacity: 0.8 !important;
+}
+
+#videoai-btn:active {
+  opacity: 0.6 !important;
+}
+
+#videoai-btn svg {
+  width: 24px !important;
+  height: 24px !important;
+  display: block !important;
+}
+
+/* ========================================
+   工具提示
+   ======================================== */
+
+#videoai-btn[title] {
+  position: relative;
+}
+
+/* ========================================
+   响应式适配
+   ======================================== */
+
+/* 在不同的 YouTube 主题下的适配 */
+.dark #videoai-btn {
+  color: #fff !important;
+}
+
+.light #videoai-btn {
+  color: #212121 !important;
+}

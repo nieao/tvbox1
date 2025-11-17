@@ -1,0 +1,346 @@
+/**
+ * Video-AI Browser Extension - Options Page Styles
+ * 设置页面的专用样式
+ */
+
+/* ========================================
+   选项页面布局
+   ======================================== */
+
+body.options-page {
+  width: 100%;
+  max-width: 100%;
+}
+
+.container {
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========================================
+   欢迎消息
+   ======================================== */
+
+.welcome-section {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  color: white;
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+}
+
+.welcome-section h2 {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+.welcome-section p {
+  opacity: 0.95;
+  line-height: 1.6;
+}
+
+/* ========================================
+   内容区域
+   ======================================== */
+
+.content {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ========================================
+   侧边栏导航
+   ======================================== */
+
+.sidebar {
+  width: 200px;
+  background: var(--bg-light);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  height: fit-content;
+  position: sticky;
+  top: 0;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition);
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.nav-item:hover {
+  background: white;
+  color: var(--primary-color);
+}
+
+.nav-item.active {
+  background: var(--primary-color);
+  color: white;
+}
+
+.nav-item .icon {
+  font-size: 18px;
+}
+
+.nav-item .label {
+  flex: 1;
+}
+
+/* ========================================
+   设置面板
+   ======================================== */
+
+.settings-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 12px;
+}
+
+.settings-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-panel::-webkit-scrollbar-track {
+  background: var(--bg-light);
+  border-radius: 3px;
+}
+
+.settings-panel::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.settings-panel::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+.tab-content {
+  padding: 20px;
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.tab-content h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+}
+
+.tab-content h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.tab-content h4 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 12px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.tab-content ul {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 8px;
+}
+
+.tab-content ul li {
+  padding: 6px 0;
+  padding-left: 20px;
+  position: relative;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.tab-content ul li:before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--success-color);
+  font-weight: 600;
+}
+
+.tab-content a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.tab-content a:hover {
+  text-decoration: underline;
+}
+
+/* ========================================
+   信息框
+   ======================================== */
+
+.info-box {
+  background: var(--bg-light);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.info-box h3 {
+  color: var(--text-primary);
+  margin-top: 0;
+}
+
+.info-box p {
+  margin: 8px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ========================================
+   连接状态
+   ======================================== */
+
+#connectionStatus {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+#connectionStatus.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #d1fae5;
+}
+
+#connectionStatus.error {
+  background: #fef2f2;
+  color: #7f1d1d;
+  border: 1px solid #fecaca;
+}
+
+/* ========================================
+   页脚
+   ======================================== */
+
+.footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-light);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  margin-top: 20px;
+}
+
+.footer .btn {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.footer .btn-primary {
+  width: auto;
+}
+
+.footer .btn-secondary {
+  width: auto;
+  margin-right: 0;
+  margin-bottom: 0;
+}
+
+.save-status {
+  padding: 8px 12px;
+  background: var(--bg-white);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 500;
+  flex: 1;
+  text-align: center;
+}
+
+.save-status.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #d1fae5;
+}
+
+.save-status.error {
+  background: #fef2f2;
+  color: #7f1d1d;
+  border: 1px solid #fecaca;
+}
+
+.save-status.warning {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+/* ========================================
+   响应式设计
+   ======================================== */
+
+@media (max-width: 1024px) {
+  .content {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding: 8px;
+  }
+
+  .nav-item {
+    flex-shrink: 0;
+    margin-bottom: 0;
+  }
+
+  .settings-panel {
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 12px;
+  }
+
+  .welcome-section {
+    padding: 16px;
+  }
+
+  .content {
+    gap: 12px;
+  }
+
+  .footer {
+    flex-direction: column;
+    padding: 12px;
+    margin-top: 12px;
+  }
+
+  .footer .btn {
+    width: 100%;
+  }
+}

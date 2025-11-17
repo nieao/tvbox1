@@ -1,0 +1,64 @@
+{
+  "best_strategy": [
+    "hybrid",
+    4.344444444444445
+  ],
+  "worst_strategy": [
+    "temporal",
+    3.608333333333334
+  ],
+  "negative_patterns": [],
+  "improvements": [
+    "✅ 当前表现良好，继续保持！"
+  ],
+  "stats": {
+    "total_count": 50,
+    "average_rating": 3.8760000000000003,
+    "positive_count": 27,
+    "negative_count": 0,
+    "neutral_count": 1,
+    "by_strategy": {
+      "interest_based": 3.9533333333333327,
+      "semantic": 3.7214285714285715,
+      "hybrid": 4.344444444444445,
+      "temporal": 3.608333333333334
+    },
+    "by_type": {
+      "transition_quality": 3.6599999999999997,
+      "overall": 3.9583333333333335,
+      "order_quality": 4.036363636363636,
+      "segment_quality": 3.9166666666666674
+    },
+    "trend": "stable"
+  },
+  "strategy_rankings": [
+    [
+      "hybrid",
+      0.5336111111111111
+    ],
+    [
+      "interest_based",
+      0.5238333333333334
+    ],
+    [
+      "semantic",
+      0.5180357142857143
+    ],
+    [
+      "temporal",
+      0.5152083333333334
+    ]
+  ],
+  "recommendations": [
+    "🏆 推荐使用 'hybrid' 策略（平均评分：4.3/5.0）",
+    "⭐ 叙事排序表现优异（4.0/5.0）"
+  ],
+  "generated_at": "2025-11-17T12:35:09.721723",
+  "total_feedbacks": 50,
+  "strategy_performance": {
+    "hybrid": 0.5336111111111111,
+    "semantic": 0.5180357142857143,
+    "temporal": 0.5152083333333334,
+    "interest_based": 0.5238333333333334
+  }
+}

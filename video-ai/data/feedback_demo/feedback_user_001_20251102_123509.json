@@ -1,0 +1,19 @@
+{
+  "user_id": "user_001",
+  "video_id": "video_0083",
+  "feedback_type": "overall",
+  "rating": 3.6,
+  "segment_id": null,
+  "comment": null,
+  "timestamp": "2025-11-02T12:35:09.703993",
+  "user_interests": [
+    "娱乐",
+    "影视",
+    "游戏"
+  ],
+  "used_strategy": "hybrid",
+  "video_metadata": {
+    "compression_ratio": 0.4921688262585256,
+    "segments_count": 15
+  }
+}

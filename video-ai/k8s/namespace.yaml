@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: video-ai
+  labels:
+    app: video-ai
+    name: video-ai

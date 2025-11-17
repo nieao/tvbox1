@@ -1,0 +1,19 @@
+{
+  "user_id": "user_004",
+  "video_id": "video_0013",
+  "feedback_type": "segment_quality",
+  "rating": 4.7,
+  "segment_id": null,
+  "comment": "叙事逻辑清晰连贯",
+  "timestamp": "2025-10-23T12:35:09.715293",
+  "user_interests": [
+    "商业",
+    "创业",
+    "管理"
+  ],
+  "used_strategy": "interest_based",
+  "video_metadata": {
+    "compression_ratio": 0.31828423024726704,
+    "segments_count": 6
+  }
+}

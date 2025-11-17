@@ -1,0 +1,15 @@
+{
+  "user_id": "user_181",
+  "video_id": "video_new_0009",
+  "feedback_type": "overall",
+  "rating": 4.6,
+  "segment_id": null,
+  "comment": "系统改进后效果很好！",
+  "timestamp": "2025-11-17T12:35:09.726964",
+  "user_interests": [
+    "AI",
+    "技术"
+  ],
+  "used_strategy": "hybrid",
+  "video_metadata": {}
+}

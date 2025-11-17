@@ -1,0 +1,19 @@
+{
+  "user_id": "user_008",
+  "video_id": "video_0058",
+  "feedback_type": "transition_quality",
+  "rating": 2.7,
+  "segment_id": null,
+  "comment": null,
+  "timestamp": "2025-11-08T12:35:09.706000",
+  "user_interests": [
+    "商业",
+    "创业",
+    "管理"
+  ],
+  "used_strategy": "semantic",
+  "video_metadata": {
+    "compression_ratio": 0.5088001236794104,
+    "segments_count": 10
+  }
+}

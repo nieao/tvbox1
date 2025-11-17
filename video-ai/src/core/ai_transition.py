@@ -11,21 +11,31 @@ AI 视频过渡生成器 - Latent Blending 实现
 - 降级机制: GPU 不可用时自动降级到简单过渡
 """
 
-from typing import Optional, List, Dict, Union, Tuple, Callable
+from typing import Optional, List, Dict, Union, Tuple, Callable, TYPE_CHECKING, Any
 from dataclasses import dataclass
 import os
 import time
+
+if TYPE_CHECKING:
+    from PIL import Image
+    import numpy as np
+    import torch
 
 # 核心依赖
 try:
     import torch
     import numpy as np
-    from PIL import Image
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
     torch = None
     np = None
+
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
     Image = None
 
 # Diffusers 依赖
@@ -204,10 +214,10 @@ class AITransitionGenerator:
         prompt_start: str,
         prompt_end: str,
         num_frames: Optional[int] = None,
-        frame_start: Optional[Union[Image.Image, np.ndarray]] = None,
-        frame_end: Optional[Union[Image.Image, np.ndarray]] = None,
+        frame_start: Optional[Any] = None,  # PIL.Image.Image or np.ndarray
+        frame_end: Optional[Any] = None,  # PIL.Image.Image or np.ndarray
         callback: Optional[Callable[[int, int], None]] = None
-    ) -> List[Image.Image]:
+    ) -> List[Any]:  # List[PIL.Image.Image]
         """生成 AI 过渡帧
 
         Args:
@@ -250,7 +260,7 @@ class AITransitionGenerator:
         prompt_end: str,
         num_frames: int,
         callback: Optional[Callable] = None
-    ) -> List[Image.Image]:
+    ) -> List[Any]:  # List[PIL.Image.Image]
         """生成插值帧 (简化版 latent blending)
 
         策略:
@@ -317,7 +327,7 @@ class AITransitionGenerator:
         self,
         prompt: str,
         negative_prompt: str = ""
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[Any, ...]:
         """编码文本提示为嵌入向量
 
         Returns:
@@ -385,10 +395,10 @@ class AITransitionGenerator:
 
     def _slerp_tensors(
         self,
-        tensor1: torch.Tensor,
-        tensor2: torch.Tensor,
+        tensor1: Any,  # torch.Tensor
+        tensor2: Any,  # torch.Tensor
         alpha: float
-    ) -> torch.Tensor:
+    ) -> Any:  # torch.Tensor
         """球面线性插值 (张量版本)"""
         # 展平张量
         original_shape = tensor1.shape
@@ -456,8 +466,8 @@ class AITransitionGenerator:
     def _generate_image_from_embeddings(
         self,
         embeddings: Tuple,
-        generator: torch.Generator
-    ) -> Image.Image:
+        generator: Any  # torch.Generator
+    ) -> Any:  # PIL.Image.Image
         """从嵌入生成图像"""
         prompt_embeds, negative_prompt_embeds, pooled_embeds, negative_pooled_embeds = embeddings
 
@@ -556,7 +566,7 @@ class AITransitionGenerator:
 
     def save_frames(
         self,
-        frames: List[Image.Image],
+        frames: List[Any],  # List[PIL.Image.Image]
         output_dir: str,
         prefix: str = "frame"
     ):
@@ -595,7 +605,7 @@ def create_ai_transition(
     output_dir: Optional[str] = None,
     device: str = "cuda",
     verbose: bool = True
-) -> List[Image.Image]:
+) -> List[Any]:  # List[PIL.Image.Image]
     """便捷函数: 创建 AI 过渡
 
     Args:

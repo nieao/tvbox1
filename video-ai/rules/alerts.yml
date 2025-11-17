@@ -1,0 +1,91 @@
+groups:
+  - name: video-ai-critical
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up{job="video-ai-api"} == 0
+        for: 5m
+        annotations:
+          severity: critical
+          summary: "Video-AI API service is down"
+          description: "Video-AI API has been unreachable for more than 5 minutes"
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.01
+        for: 5m
+        annotations:
+          severity: warning
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} (>1%)"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, http_request_duration_seconds) > 1
+        for: 5m
+        annotations:
+          severity: warning
+          summary: "High API latency"
+          description: "p95 latency is {{ $value }}s (>1s)"
+
+      - alert: DiskSpaceWarning
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.2
+        for: 5m
+        annotations:
+          severity: warning
+          summary: "Low disk space"
+          description: "Disk {{ $labels.device }} has {{ printf \"%.2f\" $value }}% free space"
+
+      - alert: DiskSpaceCritical
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        annotations:
+          severity: critical
+          summary: "Critical disk space"
+          description: "Disk {{ $labels.device }} is almost full"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+        for: 5m
+        annotations:
+          severity: warning
+          summary: "High memory usage"
+          description: "Memory usage is {{ printf \"%.2f\" $value }}%"
+
+      - alert: HighCPUUsage
+        expr: (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.8
+        for: 5m
+        annotations:
+          severity: warning
+          summary: "High CPU usage"
+          description: "CPU usage is {{ printf \"%.2f\" $value }}%"
+
+      - alert: DatabaseConnectionHigh
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        annotations:
+          severity: warning
+          summary: "High database connections"
+          description: "Current connections: {{ $value }}"
+
+      - alert: DatabaseSlowQueries
+        expr: rate(pg_slow_queries_total[5m]) > 10
+        for: 5m
+        annotations:
+          severity: warning
+          summary: "High number of slow queries"
+          description: "Rate: {{ $value }} queries/sec"
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.85
+        for: 5m
+        annotations:
+          severity: warning
+          summary: "High Redis memory usage"
+          description: "Memory usage: {{ printf \"%.2f\" $value }}%"
+
+      - alert: CeleryQueueBacklog
+        expr: celery_queue_length{queue="video"} > 1000
+        for: 10m
+        annotations:
+          severity: warning
+          summary: "Video processing queue backlog"
+          description: "Queue length: {{ $value }} tasks"

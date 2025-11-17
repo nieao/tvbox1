@@ -1,0 +1,40 @@
+# Docker Compose 开发配置
+# 简化版本，仅包含核心服务
+
+version: '3.8'
+
+services:
+  # FastAPI Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: video-ai-api-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SECRET_KEY=dev-secret-key-change-me
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - /tmp/video-ai:/tmp/video-ai
+    command: python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - video-ai-network
+    restart: unless-stopped
+
+  # Redis (可选，用于缓存和任务队列)
+  redis:
+    image: redis:7-alpine
+    container_name: video-ai-redis-dev
+    ports:
+      - "6379:6379"
+    networks:
+      - video-ai-network
+    restart: unless-stopped
+
+networks:
+  video-ai-network:
+    driver: bridge

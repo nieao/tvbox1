@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: video-ai
+data:
+  redis-url: "redis://redis:6379/0"
+  mongodb-uri: "mongodb://admin:password@mongo:27017/video_ai?authSource=admin"
+  log-level: "INFO"
+  environment: "production"

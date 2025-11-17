@@ -167,15 +167,28 @@ class UserProfile:
 class PersonalizationService:
     """个性化服务"""
 
-    def __init__(self, storage_dir: str = "data/profiles"):
+    def __init__(self, storage_dir: str = "data/profiles", enable_realtime: bool = True):
         """
         初始化个性化服务
 
         Args:
             storage_dir: 用户画像存储目录
+            enable_realtime: 是否启用实时推荐引擎
         """
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
+
+        # 实时推荐引擎
+        self.enable_realtime = enable_realtime
+        if enable_realtime:
+            try:
+                from .realtime_recommendation import RealtimeRecommendationEngine, UserBehavior
+                self.realtime_engine = RealtimeRecommendationEngine()
+                self.UserBehavior = UserBehavior
+            except ImportError as e:
+                print(f"警告: 无法加载实时推荐引擎: {e}")
+                self.enable_realtime = False
+                self.realtime_engine = None
 
     def create_profile(
         self,
@@ -268,6 +281,127 @@ class PersonalizationService:
         # TODO: 实现基于历史的智能推荐算法
         # 这里简化实现：返回用户当前配置
         return profile.config
+
+    # ========== 实时推荐功能 ==========
+
+    def track_user_action(
+        self,
+        user_id: str,
+        action: str,
+        video_id: str,
+        segment_id: Optional[str] = None,
+        duration: float = 0.0
+    ):
+        """
+        追踪用户行为
+
+        Args:
+            user_id: 用户ID
+            action: 行为类型 (view, skip, like, dislike, share等)
+            video_id: 视频ID
+            segment_id: 片段ID（可选）
+            duration: 观看时长（秒）
+        """
+        if not self.enable_realtime:
+            return
+
+        behavior = self.UserBehavior(
+            user_id=user_id,
+            action=action,
+            video_id=video_id,
+            segment_id=segment_id,
+            duration=duration
+        )
+        self.realtime_engine.track_behavior(behavior)
+
+        # 同时更新用户画像的历史记录
+        profile = self.get_profile(user_id)
+        if profile:
+            if action in ['view', 'like', 'share']:
+                # 添加反馈
+                profile.add_feedback(video_id, action, {
+                    'duration': duration,
+                    'segment_id': segment_id
+                })
+                self.save_profile(profile)
+
+    def add_video_metadata(self, video_id: str, metadata: Dict):
+        """
+        添加视频元数据到实时推荐引擎
+
+        Args:
+            video_id: 视频ID
+            metadata: 元数据字典
+        """
+        if not self.enable_realtime:
+            return
+
+        self.realtime_engine.add_video_metadata(video_id, metadata)
+
+    def get_realtime_recommendations(
+        self,
+        user_id: str,
+        num: int = 10,
+        exclude_watched: bool = True
+    ) -> List[Dict]:
+        """
+        获取实时推荐
+
+        Args:
+            user_id: 用户ID
+            num: 推荐数量
+            exclude_watched: 是否排除已观看的视频
+
+        Returns:
+            推荐列表
+        """
+        if not self.enable_realtime:
+            return []
+
+        return self.realtime_engine.get_recommendations(
+            user_id,
+            num_recommendations=num,
+            exclude_watched=exclude_watched
+        )
+
+    def get_user_insights(self, user_id: str) -> Dict:
+        """
+        获取用户洞察数据
+
+        Args:
+            user_id: 用户ID
+
+        Returns:
+            用户洞察字典
+        """
+        if not self.enable_realtime:
+            return {'status': 'disabled', 'message': '实时推荐未启用'}
+
+        return self.realtime_engine.get_user_insights(user_id)
+
+    def get_trending_videos(self) -> Dict[str, float]:
+        """
+        获取当前热门视频
+
+        Returns:
+            视频ID到热度分数的映射
+        """
+        if not self.enable_realtime:
+            return {}
+
+        return self.realtime_engine.trending_cache
+
+    def get_recommendation_stats(self) -> Dict:
+        """
+        获取推荐系统统计信息
+
+        Returns:
+            统计数据字典
+        """
+        if not self.enable_realtime:
+            return {'status': 'disabled'}
+
+        return self.realtime_engine.get_statistics()
 
 
 if __name__ == "__main__":

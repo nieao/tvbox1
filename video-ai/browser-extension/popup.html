@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video-AI</title>
+  <link rel="stylesheet" href="styles/popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎬 Video-AI</h1>
+      <p class="subtitle">智能视频编辑</p>
+    </div>
+
+    <div class="section">
+      <h3>当前视频</h3>
+      <div id="videoInfo" class="info-box">
+        <span id="videoStatus">未检测到视频</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>⚙️ 处理设置</h3>
+
+      <div class="form-group">
+        <label for="interests">兴趣标签</label>
+        <input
+          type="text"
+          id="interests"
+          placeholder="例如: AI, 编程, 技术"
+          class="input-field"
+        >
+        <small class="help-text">以逗号分隔多个标签</small>
+      </div>
+
+      <div class="form-group">
+        <label for="outputLength">输出长度</label>
+        <select id="outputLength" class="select-field">
+          <option value="short">短 (30% 原视频长度)</option>
+          <option value="medium" selected>中 (50% 原视频长度)</option>
+          <option value="long">长 (70% 原视频长度)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="autoDownload">
+          处理完成后自动下载
+        </label>
+      </div>
+    </div>
+
+    <div id="actionSection" class="section hidden">
+      <button id="processBtn" class="btn btn-primary">
+        <span class="btn-icon">🎯</span>
+        <span class="btn-text">智能剪辑</span>
+      </button>
+      <button id="settingsBtn" class="btn btn-secondary">
+        <span class="btn-icon">⚙️</span>
+        <span class="btn-text">更多设置</span>
+      </button>
+    </div>
+
+    <div id="status" class="status-box hidden"></div>
+
+    <div id="progress" class="progress-section hidden">
+      <div class="progress-info">
+        <span id="progressLabel">处理中...</span>
+        <span id="progressText">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+      <div id="progressDetails" class="progress-details"></div>
+    </div>
+
+    <div class="footer">
+      <a href="#" id="supportLink" class="link">获取帮助</a>
+      <span class="separator">|</span>
+      <a href="#" id="feedbackLink" class="link">反馈建议</a>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

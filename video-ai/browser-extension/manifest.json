@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Video-AI - 智能视频编辑",
+  "version": "1.0.0",
+  "description": "一键智能剪辑 YouTube 视频，个性化内容推荐",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://youtu.be/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Video-AI - 智能视频编辑"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://youtu.be/*"
+      ],
+      "js": ["content.js"],
+      "css": ["styles/content.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

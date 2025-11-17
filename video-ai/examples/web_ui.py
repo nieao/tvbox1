@@ -18,7 +18,8 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.core.editor import VideoEditor
-from src.services.personalization import PersonalizationConfig
+from src.services.personalization import PersonalizationConfig, PersonalizationService
+from src.services.feedback_learning import FeedbackLearningSystem, Feedback
 from src.utils.youtube_downloader import YouTubeDownloader
 
 
@@ -37,10 +38,21 @@ DATA_DIR = project_root / "data"
 INPUT_DIR = DATA_DIR / "input"
 OUTPUT_DIR = DATA_DIR / "output"
 HISTORY_FILE = DATA_DIR / "history.json"
+FEEDBACK_DIR = DATA_DIR / "feedback"
 
 # 确保目录存在
 INPUT_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+FEEDBACK_DIR.mkdir(parents=True, exist_ok=True)
+
+# 初始化反馈系统
+feedback_system = FeedbackLearningSystem(storage_dir=str(FEEDBACK_DIR))
+
+# 初始化个性化服务（包含实时推荐引擎）
+personalization_service = PersonalizationService(
+    storage_dir=str(DATA_DIR / "profiles"),
+    enable_realtime=True
+)
 
 
 # ==================== 辅助函数 ====================
@@ -257,9 +269,10 @@ with st.sidebar:
 # ==================== 主内容区域 ====================
 
 # 创建选项卡
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📹 处理视频",
     "📊 处理历史",
+    "📝 反馈学习",
     "📂 文件管理",
     "ℹ️ 关于"
 ])
@@ -465,6 +478,10 @@ with tab1:
                     # 显示结果
                     st.success("🎉 视频处理成功!")
 
+                    # 保存结果到 session_state 用于反馈
+                    st.session_state['last_result'] = result
+                    st.session_state['last_config'] = config
+
                     # 结果指标
                     st.markdown("### 📊 处理结果")
 
@@ -532,6 +549,8 @@ with tab1:
                         'compression_ratio': result.compression_ratio,
                         'density_improvement': result.density_improvement,
                         'segments_count': result.segments_count,
+                        'video_id': result.video_id,
+                        'used_strategy': result.used_strategy,
                         'config': {
                             'interests': interests,
                             'skip_topics': skip_topics,
@@ -539,6 +558,106 @@ with tab1:
                             'transition_style': transition_style
                         }
                     })
+
+                    # ===== 反馈收集区域 =====
+                    st.markdown("---")
+                    st.markdown("### 📝 评价这次处理")
+                    st.write("您的反馈将帮助我们持续改进 AI 模型")
+
+                    feedback_col1, feedback_col2 = st.columns([2, 1])
+
+                    with feedback_col1:
+                        # 整体评分
+                        overall_rating = st.slider(
+                            "整体满意度",
+                            min_value=1,
+                            max_value=5,
+                            value=3,
+                            help="1=很不满意, 5=非常满意",
+                            key="overall_rating"
+                        )
+
+                        # 具体评分
+                        with st.expander("🔍 详细评价（可选）"):
+                            segment_rating = st.slider("片段选择质量", 1, 5, 3, key="segment_rating")
+                            transition_rating = st.slider("过渡效果质量", 1, 5, 3, key="transition_rating")
+                            order_rating = st.slider("叙事排序质量", 1, 5, 3, key="order_rating")
+
+                        # 评论
+                        comment = st.text_area(
+                            "您的意见和建议",
+                            placeholder="例如：片段选择很准确，但过渡效果可以更自然...",
+                            key="feedback_comment"
+                        )
+
+                    with feedback_col2:
+                        st.info(f"🎯 使用的策略: {result.used_strategy}")
+                        st.caption(f"视频ID: {result.video_id[:16]}...")
+
+                        if st.button("✅ 提交反馈", type="primary", use_container_width=True):
+                            # 收集整体反馈
+                            overall_feedback = Feedback(
+                                user_id=st.session_state.get('user_id', 'anonymous'),
+                                video_id=result.video_id,
+                                feedback_type="overall",
+                                rating=overall_rating,
+                                comment=comment,
+                                user_interests=interests,
+                                used_strategy=result.used_strategy,
+                                video_metadata={
+                                    'compression_ratio': result.compression_ratio,
+                                    'segments_count': result.segments_count
+                                }
+                            )
+
+                            success = feedback_system.collect_feedback(overall_feedback)
+
+                            # 收集详细反馈
+                            if 'segment_rating' in st.session_state:
+                                feedback_system.collect_feedback(Feedback(
+                                    user_id=st.session_state.get('user_id', 'anonymous'),
+                                    video_id=result.video_id,
+                                    feedback_type="segment_quality",
+                                    rating=segment_rating,
+                                    user_interests=interests,
+                                    used_strategy=result.used_strategy
+                                ))
+
+                            if 'transition_rating' in st.session_state:
+                                feedback_system.collect_feedback(Feedback(
+                                    user_id=st.session_state.get('user_id', 'anonymous'),
+                                    video_id=result.video_id,
+                                    feedback_type="transition_quality",
+                                    rating=transition_rating,
+                                    user_interests=interests,
+                                    used_strategy=result.used_strategy
+                                ))
+
+                            if 'order_rating' in st.session_state:
+                                feedback_system.collect_feedback(Feedback(
+                                    user_id=st.session_state.get('user_id', 'anonymous'),
+                                    video_id=result.video_id,
+                                    feedback_type="order_quality",
+                                    rating=order_rating,
+                                    user_interests=interests,
+                                    used_strategy=result.used_strategy
+                                ))
+
+                            if success:
+                                st.success("✅ 感谢您的反馈！这将帮助我们改进系统")
+                                st.balloons()
+
+                                # 显示学习报告
+                                with st.expander("📊 查看学习洞察"):
+                                    stats = feedback_system.get_statistics_summary()
+                                    st.write("**系统统计:**")
+                                    st.write(f"- 总反馈数: {stats['total_feedbacks']}")
+                                    st.write(f"- 平均评分: {stats['average_rating']:.2f}/5.0")
+                                    st.write(f"- 满意度: {stats['positive_rate']:.1%}")
+                                    if stats['top_strategy']:
+                                        st.write(f"- 最佳策略: {stats['top_strategy'][0]}")
+                            else:
+                                st.error("❌ 反馈提交失败，请重试")
 
                 except Exception as e:
                     progress_bar.empty()
@@ -567,6 +686,126 @@ with tab1:
 
 with tab2:
     st.header("📊 处理历史")
+
+    # ========== 实时推荐区域 ==========
+    st.subheader("🎯 为您推荐")
+
+    # 获取或创建用户ID
+    if 'user_id' not in st.session_state:
+        st.session_state.user_id = 'demo_user'
+
+    user_id = st.session_state.user_id
+
+    col1, col2, col3 = st.columns([2, 1, 1])
+
+    with col1:
+        st.write("基于您的观看历史和兴趣，为您推荐以下内容：")
+
+    with col2:
+        num_recommendations = st.selectbox(
+            "推荐数量",
+            options=[3, 5, 10, 15],
+            index=1,
+            key="num_recommendations"
+        )
+
+    with col3:
+        if st.button("🔄 刷新推荐", key="refresh_recommendations"):
+            st.rerun()
+
+    # 添加示例视频元数据（实际应用中应从数据库获取）
+    if personalization_service.enable_realtime:
+        # 添加一些示例视频
+        sample_videos = {
+            'video_ai_tutorial': {'topics': ['AI', '教育', '技术'], 'category': '教育'},
+            'python_advanced': {'topics': ['编程', 'Python', '技术'], 'category': '编程'},
+            'machine_learning': {'topics': ['AI', '机器学习', '数据科学'], 'category': '教育'},
+            'web_dev_basics': {'topics': ['编程', 'Web开发', '前端'], 'category': '编程'},
+            'data_visualization': {'topics': ['数据科学', 'Python', '可视化'], 'category': '数据分析'},
+        }
+
+        for video_id, metadata in sample_videos.items():
+            personalization_service.add_video_metadata(video_id, metadata)
+
+        # 模拟一些用户行为（仅用于演示）
+        if 'recommendations_initialized' not in st.session_state:
+            # 为当前用户添加一些示例行为
+            personalization_service.track_user_action(user_id, 'view', 'video_ai_tutorial', duration=300)
+            personalization_service.track_user_action(user_id, 'like', 'video_ai_tutorial')
+            personalization_service.track_user_action(user_id, 'view', 'python_advanced', duration=180)
+            st.session_state.recommendations_initialized = True
+
+    # 获取推荐
+    try:
+        recommendations = personalization_service.get_realtime_recommendations(
+            user_id,
+            num=num_recommendations,
+            exclude_watched=False
+        )
+
+        if recommendations:
+            st.markdown("---")
+            for i, rec in enumerate(recommendations, 1):
+                with st.container():
+                    rec_col1, rec_col2, rec_col3 = st.columns([3, 1, 1])
+
+                    with rec_col1:
+                        st.write(f"**{i}. {rec['video_id']}**")
+                        st.caption(f"推荐理由: {rec.get('reason', '算法推荐')}")
+
+                    with rec_col2:
+                        st.metric("相关度", f"{rec['score']:.2%}")
+
+                    with rec_col3:
+                        # 行为按钮
+                        if st.button("👍", key=f"like_{rec['video_id']}_{i}"):
+                            personalization_service.track_user_action(
+                                user_id, 'like', rec['video_id']
+                            )
+                            st.success("已记录您的喜好!")
+
+            # 显示用户洞察
+            with st.expander("📊 查看您的兴趣分析"):
+                insights = personalization_service.get_user_insights(user_id)
+
+                if insights.get('status') == 'active':
+                    ins_col1, ins_col2 = st.columns(2)
+
+                    with ins_col1:
+                        st.write("**总行为数:**", insights['total_behaviors'])
+                        st.write("**参与度评分:**", f"{insights['engagement_score']:.2f}")
+                        st.write("**活跃时长:**", f"{insights['active_time_minutes']:.1f} 分钟")
+
+                    with ins_col2:
+                        st.write("**主要兴趣:**")
+                        for topic in insights.get('top_interests', []):
+                            st.write(f"- {topic}")
+
+                        if insights.get('interest_scores'):
+                            st.write("\n**兴趣分布:**")
+                            for topic, score in list(insights['interest_scores'].items())[:5]:
+                                st.progress(score, text=f"{topic}: {score:.2%}")
+
+                    st.write("**行为统计:**")
+                    st.json(insights.get('action_counts', {}))
+                else:
+                    st.info(insights.get('message', '暂无数据'))
+
+            # 系统统计
+            with st.expander("🔍 系统统计"):
+                stats = personalization_service.get_recommendation_stats()
+                st.json(stats)
+
+        else:
+            st.info("暂无推荐内容。开始观看视频后，系统会为您生成个性化推荐。")
+
+    except Exception as e:
+        st.warning(f"推荐功能暂时不可用: {str(e)}")
+
+    st.markdown("---")
+
+    # ========== 处理历史记录 ==========
+    st.subheader("📜 历史记录")
 
     history = load_history()
 

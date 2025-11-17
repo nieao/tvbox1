@@ -1,0 +1,19 @@
+{
+  "user_id": "user_002",
+  "video_id": "video_0037",
+  "feedback_type": "transition_quality",
+  "rating": 4.1,
+  "segment_id": null,
+  "comment": null,
+  "timestamp": "2025-11-17T12:35:09.709045",
+  "user_interests": [
+    "商业",
+    "创业",
+    "管理"
+  ],
+  "used_strategy": "temporal",
+  "video_metadata": {
+    "compression_ratio": 0.384769467501967,
+    "segments_count": 6
+  }
+}

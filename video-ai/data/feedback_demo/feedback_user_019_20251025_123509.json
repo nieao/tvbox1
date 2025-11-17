@@ -1,0 +1,19 @@
+{
+  "user_id": "user_019",
+  "video_id": "video_0060",
+  "feedback_type": "overall",
+  "rating": 3.8,
+  "segment_id": null,
+  "comment": null,
+  "timestamp": "2025-10-25T12:35:09.711088",
+  "user_interests": [
+    "商业",
+    "创业",
+    "管理"
+  ],
+  "used_strategy": "semantic",
+  "video_metadata": {
+    "compression_ratio": 0.6400569835636367,
+    "segments_count": 12
+  }
+}
