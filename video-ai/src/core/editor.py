@@ -17,7 +17,9 @@ except ImportError:
 
 from .transcriber import VideoTranscriber, Transcript
 from .analyzer import ContentAnalyzer, AnalysisResult, KeySegment
+from .generator import TransitionGenerator
 from ..services.personalization import PersonalizationConfig
+from ..utils.youtube_downloader import YouTubeDownloader
 
 
 @dataclass
@@ -38,7 +40,9 @@ class VideoEditor:
         self,
         user_interests: Optional[List[str]] = None,
         output_length: str = "medium",
-        config: Optional[PersonalizationConfig] = None
+        config: Optional[PersonalizationConfig] = None,
+        transition_style: str = "text",
+        transition_template: str = "modern"
     ):
         """
         初始化视频编辑器
@@ -47,6 +51,8 @@ class VideoEditor:
             user_interests: 用户兴趣列表
             output_length: 输出长度 ('short', 'medium', 'long')
             config: 个性化配置对象
+            transition_style: 过渡效果风格 ('text', 'fade', 'blur', 'zoom', 'gradient')
+            transition_template: 文字过渡模板 ('minimal', 'modern', 'classic', 'colorful', 'info_card')
         """
         if not MOVIEPY_AVAILABLE:
             raise ImportError(
@@ -70,6 +76,13 @@ class VideoEditor:
         self.analyzer = ContentAnalyzer(
             api_provider="openai"  # TODO: 从配置读取
         )
+
+        # 初始化过渡生成器
+        self.transition_generator = TransitionGenerator(
+            transition_style=transition_style,
+            duration=2.0
+        )
+        self.transition_template = transition_template
 
     def process_video(
         self,
@@ -153,14 +166,19 @@ class VideoEditor:
             # 提取子片段
             subclip = video.subclip(segment.start, segment.end)
 
-            # 如果配置了过渡效果，添加文字卡片
-            if self.config.transition_style == "text" and i > 0:
-                transition_clip = self._create_text_transition(
-                    segment.topic,
-                    duration=2.0
-                )
-                clips.append(transition_clip)
-                total_edited_duration += 2.0
+            # 如果配置了过渡效果，添加过渡片段
+            if self.config.transition_style != "none" and i > 0:
+                try:
+                    transition_clip = self.transition_generator.create_transition(
+                        text=segment.topic,
+                        size=video.size if hasattr(video, 'size') else (1920, 1080),
+                        template=self.transition_template
+                    )
+                    clips.append(transition_clip)
+                    total_edited_duration += self.transition_generator.duration
+                except Exception as e:
+                    print(f"  警告: 创建过渡效果失败 ({e})，跳过")
+                    continue
 
             clips.append(subclip)
             total_edited_duration += (segment.end - segment.start)
@@ -197,35 +215,8 @@ class VideoEditor:
             segments_count=len(analysis.key_segments)
         )
 
-    def _create_text_transition(
-        self,
-        text: str,
-        duration: float = 2.0
-    ) -> CompositeVideoClip:
-        """创建文字过渡卡片"""
-        try:
-            # 创建文字片段
-            txt_clip = TextClip(
-                text,
-                fontsize=48,
-                color='white',
-                bg_color='black',
-                size=(1920, 1080),
-                method='caption',
-                align='center'
-            ).set_duration(duration)
-
-            return txt_clip
-
-        except Exception as e:
-            print(f"  警告: 无法创建文字过渡 ({e})，跳过")
-            # 如果TextClip失败，返回黑色片段
-            from moviepy.editor import ColorClip
-            return ColorClip(
-                size=(1920, 1080),
-                color=(0, 0, 0),
-                duration=duration
-            )
+    # 注意：_create_text_transition 已废弃，使用 TransitionGenerator 替代
+    # 参见 transition_generator.create_transition()
 
     def batch_process(
         self,
@@ -332,6 +323,167 @@ class VideoEditor:
                 for seg in analysis.key_segments
             ]
         }
+
+    def process_youtube_video(
+        self,
+        youtube_url: str,
+        output_path: str,
+        quality: str = "720p",
+        use_transcript: bool = True,
+        **kwargs
+    ) -> EditingResult:
+        """
+        处理 YouTube 视频
+
+        Args:
+            youtube_url: YouTube 视频 URL
+            output_path: 输出路径
+            quality: 下载质量 (480p, 720p, 1080p, best)
+            use_transcript: 是否尝试使用 YouTube 字幕（如果可用）
+            **kwargs: 其他参数
+
+        Returns:
+            EditingResult 对象
+        """
+        print(f"\n{'='*60}")
+        print(f"处理 YouTube 视频: {youtube_url}")
+        print(f"{'='*60}\n")
+
+        # 步骤1: 下载视频
+        print("步骤 1/5: 下载 YouTube 视频...")
+        downloader = YouTubeDownloader()
+
+        def progress_callback(d):
+            if d['status'] == 'downloading':
+                percent = d.get('_percent_str', 'N/A')
+                speed = d.get('_speed_str', 'N/A')
+                print(f"\r  下载进度: {percent} | 速度: {speed}", end='')
+
+        try:
+            video_info = downloader.download_video(
+                youtube_url,
+                quality=quality,
+                progress_callback=progress_callback
+            )
+            print(f"\n  下载成功: {video_info['title']}")
+        except Exception as e:
+            raise Exception(f"下载 YouTube 视频失败: {e}")
+
+        # 步骤2: 尝试获取字幕
+        transcript_text = None
+        if use_transcript:
+            print("\n步骤 2/5: 尝试获取 YouTube 字幕...")
+            try:
+                transcript_text = downloader.get_transcript(
+                    youtube_url,
+                    languages=self.config.language.split('-')  # ['zh', 'CN'] 或 ['en']
+                )
+                if transcript_text:
+                    print(f"  成功获取字幕（{len(transcript_text)} 字符）")
+                    print("  提示: 使用 YouTube 字幕可以跳过语音识别，加快处理速度")
+                else:
+                    print("  未找到字幕，将使用语音识别")
+            except Exception as e:
+                print(f"  获取字幕失败: {e}")
+                print("  将使用语音识别")
+
+        # 步骤3: 处理下载的视频
+        print("\n步骤 3/5: 处理视频...")
+
+        # 如果有字幕，可以选择直接使用（需要转换为 Transcript 对象）
+        # 或者仍然使用语音识别来获取时间戳
+        # 这里我们仍然使用 process_video，它会进行完整的转录和分析
+
+        result = self.process_video(
+            video_info['filepath'],
+            output_path,
+            **kwargs
+        )
+
+        # 步骤4: 添加元数据
+        print("\n步骤 4/5: 添加元数据...")
+        result.youtube_metadata = {
+            'url': youtube_url,
+            'video_id': video_info['video_id'],
+            'title': video_info['title'],
+            'original_duration': video_info['duration'],
+            'quality': quality,
+            'has_transcript': transcript_text is not None
+        }
+
+        print(f"\n{'='*60}")
+        print("YouTube 视频处理完成！")
+        print(f"原始视频: {video_info['title']}")
+        print(f"原始时长: {result.original_duration:.1f}秒")
+        print(f"剪辑后时长: {result.edited_duration:.1f}秒")
+        print(f"压缩率: {result.compression_ratio:.1%}")
+        print(f"{'='*60}\n")
+
+        return result
+
+    def batch_process_youtube(
+        self,
+        youtube_urls: List[str],
+        output_dir: str,
+        quality: str = "720p",
+        **kwargs
+    ) -> List[EditingResult]:
+        """
+        批量处理 YouTube 视频
+
+        Args:
+            youtube_urls: YouTube 视频 URL 列表
+            output_dir: 输出目录
+            quality: 视频质量
+            **kwargs: 其他参数
+
+        Returns:
+            EditingResult 列表
+        """
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        print(f"开始批量处理 {len(youtube_urls)} 个 YouTube 视频")
+
+        results = []
+        failed = []
+
+        for i, url in enumerate(youtube_urls, 1):
+            print(f"\n{'='*60}")
+            print(f"处理第 {i}/{len(youtube_urls)} 个视频")
+            print(f"{'='*60}")
+
+            try:
+                # 生成输出文件名
+                downloader = YouTubeDownloader()
+                video_id = downloader.extract_video_id(url)
+                output_file = output_path / f"edited_{video_id}.mp4"
+
+                # 处理视频
+                result = self.process_youtube_video(
+                    url,
+                    str(output_file),
+                    quality=quality,
+                    **kwargs
+                )
+                results.append(result)
+
+            except Exception as e:
+                print(f"\n错误: 处理视频失败 ({url}): {e}")
+                failed.append({'url': url, 'error': str(e)})
+                continue
+
+        print(f"\n{'='*60}")
+        print(f"批量处理完成！成功: {len(results)}, 失败: {len(failed)}")
+        print(f"{'='*60}")
+
+        if failed:
+            print("\n失败列表:")
+            for item in failed:
+                print(f"  - {item['url']}")
+                print(f"    错误: {item['error']}")
+
+        return results
 
 
 if __name__ == "__main__":
