@@ -8,6 +8,7 @@ import os
 from typing import List, Optional, Dict
 from dataclasses import dataclass
 from pathlib import Path
+from datetime import datetime
 
 try:
     from moviepy.editor import VideoFileClip, concatenate_videoclips, TextClip, CompositeVideoClip
@@ -21,6 +22,8 @@ from .generator import TransitionGenerator
 from .quality_analyzer import QualityAnalyzer, QualityMetrics
 from .narrative_sorter import NarrativeSorter
 from ..services.personalization import PersonalizationConfig
+from ..services.feedback_learning import FeedbackLearningSystem
+from ..services.ab_testing import ABTestingFramework, VideoEditorABTesting
 from ..utils.youtube_downloader import YouTubeDownloader
 
 
@@ -33,6 +36,8 @@ class EditingResult:
     compression_ratio: float  # 压缩比例
     density_improvement: float  # 信息密度提升百分比
     segments_count: int       # 片段数量
+    used_strategy: str = "hybrid"  # 使用的策略
+    video_id: str = ""        # 视频ID（用于反馈）
 
 
 class VideoEditor:
@@ -44,7 +49,10 @@ class VideoEditor:
         output_length: str = "medium",
         config: Optional[PersonalizationConfig] = None,
         transition_style: str = "text",
-        transition_template: str = "modern"
+        transition_template: str = "modern",
+        ab_experiment_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        ab_storage_dir: str = "data/ab_tests"
     ):
         """
         初始化视频编辑器
@@ -55,6 +63,9 @@ class VideoEditor:
             config: 个性化配置对象
             transition_style: 过渡效果风格 ('text', 'fade', 'blur', 'zoom', 'gradient')
             transition_template: 文字过渡模板 ('minimal', 'modern', 'classic', 'colorful', 'info_card')
+            ab_experiment_id: A/B 测试实验ID（可选）
+            user_id: 用户ID（用于 A/B 测试）
+            ab_storage_dir: A/B 测试数据存储目录
         """
         if not MOVIEPY_AVAILABLE:
             raise ImportError(
@@ -92,6 +103,16 @@ class VideoEditor:
         # 初始化叙事排序器
         self.narrative_sorter = NarrativeSorter(strategy="hybrid")
 
+        # 初始化反馈学习系统
+        self.feedback_system = FeedbackLearningSystem()
+
+        # 初始化 A/B 测试框架
+        self.ab_framework = ABTestingFramework(storage_dir=ab_storage_dir)
+        self.ab_testing = None
+        if ab_experiment_id and user_id:
+            self.ab_testing = VideoEditorABTesting(self.ab_framework)
+            self.ab_testing.set_experiment(ab_experiment_id, user_id)
+
     def process_video(
         self,
         input_path: str,
@@ -116,8 +137,23 @@ class VideoEditor:
         print(f"开始处理视频: {input_path}")
         print(f"{'='*60}\n")
 
+        # 生成视频ID
+        video_id = f"video_{Path(input_path).stem}_{int(datetime.now().timestamp())}"
+
+        # 获取推荐的策略
+        best_strategy = self.feedback_system.get_best_strategy({
+            'interests': self.config.interests,
+            'output_length': self.config.output_length
+        })
+        strategy_confidence = self.feedback_system.get_strategy_confidence(best_strategy)
+
+        print(f"📊 推荐策略: {best_strategy} (置信度: {strategy_confidence:.1%})")
+
+        # 更新叙事排序器策略
+        self.narrative_sorter.strategy = best_strategy
+
         # 步骤1: 转录视频
-        print("步骤 1/4: 转录视频...")
+        print("\n步骤 1/4: 转录视频...")
         transcript = self.transcriber.transcribe(
             input_path,
             language=self.config.language.split('-')[0]  # zh-CN -> zh
@@ -137,7 +173,9 @@ class VideoEditor:
             input_path,
             output_path,
             analysis,
-            transcript
+            transcript,
+            video_id=video_id,
+            strategy=best_strategy
         )
 
         print(f"\n{'='*60}")
@@ -155,7 +193,9 @@ class VideoEditor:
         input_path: str,
         output_path: str,
         analysis: AnalysisResult,
-        transcript: Transcript
+        transcript: Transcript,
+        video_id: str = "",
+        strategy: str = "hybrid"
     ) -> EditingResult:
         """执行视频剪辑"""
         # 分析视频质量
@@ -247,14 +287,42 @@ class VideoEditor:
         compression_ratio = 1 - (total_edited_duration / original_duration)
         density_improvement = 1 / (1 - compression_ratio) - 1 if compression_ratio < 1 else 0
 
-        return EditingResult(
+        result = EditingResult(
             output_path=output_path,
             original_duration=original_duration,
             edited_duration=total_edited_duration,
             compression_ratio=compression_ratio,
             density_improvement=density_improvement,
-            segments_count=len(analysis.key_segments)
+            segments_count=len(analysis.key_segments),
+            used_strategy=strategy,
+            video_id=video_id
         )
+
+        # 记录 A/B 测试指标
+        if self.ab_testing:
+            # 记录完成率
+            completion_rate = 1.0  # 成功完成
+            self.ab_testing.record_metric(
+                'completion_rate',
+                completion_rate,
+                metadata={'strategy': strategy, 'segments': len(analysis.key_segments)}
+            )
+
+            # 记录信息密度提升
+            self.ab_testing.record_metric(
+                'density_improvement',
+                density_improvement,
+                metadata={'compression_ratio': compression_ratio}
+            )
+
+            # 记录处理时长（反向指标）
+            self.ab_testing.record_metric(
+                'efficiency_score',
+                min(1.0, original_duration / max(total_edited_duration, 1)),
+                metadata={'original_duration': original_duration}
+            )
+
+        return result
 
     # 注意：_create_text_transition 已废弃，使用 TransitionGenerator 替代
     # 参见 transition_generator.create_transition()

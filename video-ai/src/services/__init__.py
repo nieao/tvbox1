@@ -6,8 +6,21 @@ from .personalization import (
     PersonalizationService
 )
 
+from .ab_testing import (
+    ABTestingFramework,
+    ABExperiment,
+    ABTestResult,
+    ExperimentStatus,
+    VideoEditorABTesting
+)
+
 __all__ = [
     "PersonalizationConfig",
     "UserProfile",
     "PersonalizationService",
+    "ABTestingFramework",
+    "ABExperiment",
+    "ABTestResult",
+    "ExperimentStatus",
+    "VideoEditorABTesting",
 ]
