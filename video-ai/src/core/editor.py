@@ -18,6 +18,8 @@ except ImportError:
 from .transcriber import VideoTranscriber, Transcript
 from .analyzer import ContentAnalyzer, AnalysisResult, KeySegment
 from .generator import TransitionGenerator
+from .quality_analyzer import QualityAnalyzer, QualityMetrics
+from .narrative_sorter import NarrativeSorter
 from ..services.personalization import PersonalizationConfig
 from ..utils.youtube_downloader import YouTubeDownloader
 
@@ -83,6 +85,12 @@ class VideoEditor:
             duration=2.0
         )
         self.transition_template = transition_template
+
+        # 初始化质量分析器
+        self.quality_analyzer = QualityAnalyzer()
+
+        # 初始化叙事排序器
+        self.narrative_sorter = NarrativeSorter(strategy="hybrid")
 
     def process_video(
         self,
@@ -150,9 +158,42 @@ class VideoEditor:
         transcript: Transcript
     ) -> EditingResult:
         """执行视频剪辑"""
+        # 分析视频质量
+        print("  分析视频质量...")
+        try:
+            quality_metrics = self.quality_analyzer.analyze_video(input_path)
+            print(f"  视频综合质量评分: {quality_metrics.overall_score:.1f}/100")
+            print(f"  分辨率: {quality_metrics.resolution[0]}x{quality_metrics.resolution[1]} "
+                  f"| 帧率: {quality_metrics.fps:.1f}fps "
+                  f"| 码率: {quality_metrics.bitrate}kbps")
+
+            # 如果质量太低，提示改进建议
+            if quality_metrics.overall_score < 70:
+                print("\n  质量改进建议:")
+                suggestions = self.quality_analyzer.suggest_enhancements(quality_metrics)
+                for suggestion in suggestions[:3]:  # 显示前3条建议
+                    print(f"    {suggestion}")
+        except Exception as e:
+            print(f"  警告: 质量分析失败 ({e})，继续处理...")
+
         # 加载视频
         video = VideoFileClip(input_path)
         original_duration = video.duration
+
+        # 智能排序片段（叙事排序）
+        print("  智能排序片段...")
+        original_coherence = self.narrative_sorter.evaluate_coherence(analysis.key_segments)
+        print(f"    排序前连贯性: {original_coherence:.3f}")
+
+        analysis.key_segments = self.narrative_sorter.sort_segments(
+            analysis.key_segments,
+            preserve_order=False
+        )
+
+        sorted_coherence = self.narrative_sorter.evaluate_coherence(analysis.key_segments)
+        print(f"    排序后连贯性: {sorted_coherence:.3f}")
+        improvement = ((sorted_coherence - original_coherence) / max(original_coherence, 0.01)) * 100
+        print(f"    连贯性提升: {improvement:+.1f}%")
 
         # 提取关键片段
         clips = []

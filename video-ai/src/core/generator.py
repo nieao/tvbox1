@@ -2,9 +2,10 @@
 视频过渡效果生成器
 
 支持多种过渡效果类型和文字模板，为阶段二 AI 过渡做准备。
+阶段二更新: 集成 AI 过渡生成 (latent blending)
 """
 
-from typing import Literal, Optional, Tuple
+from typing import Literal, Optional, Tuple, List
 
 try:
     from moviepy.editor import (
@@ -23,6 +24,15 @@ except ImportError:
     ColorClip = None
     CompositeVideoClip = None
     ImageClip = None
+
+# AI 过渡生成器 (阶段二)
+try:
+    from .ai_transition import AITransitionGenerator, TransitionConfig
+    AI_TRANSITION_AVAILABLE = True
+except ImportError:
+    AI_TRANSITION_AVAILABLE = False
+    AITransitionGenerator = None
+    TransitionConfig = None
 
 # 延迟导入这些依赖
 numpy_available = False
@@ -56,22 +66,26 @@ except ImportError:
 
 
 class TransitionGenerator:
-    """视频过渡效果生成器"""
+    """视频过渡效果生成器 (支持 AI 生成)"""
 
-    SUPPORTED_STYLES = ["text", "fade", "blur", "zoom", "gradient"]
+    SUPPORTED_STYLES = ["text", "fade", "blur", "zoom", "gradient", "ai_generated"]
     SUPPORTED_TEMPLATES = ["minimal", "modern", "classic", "colorful", "info_card"]
 
     def __init__(
         self,
-        transition_style: Literal["text", "fade", "blur", "zoom", "gradient"] = "text",
-        duration: float = 2.0
+        transition_style: Literal["text", "fade", "blur", "zoom", "gradient", "ai_generated"] = "text",
+        duration: float = 2.0,
+        enable_ai: bool = True,
+        ai_config: Optional[TransitionConfig] = None
     ):
         """
         初始化过渡生成器
 
         Args:
-            transition_style: 过渡风格 ('text', 'fade', 'blur', 'zoom', 'gradient')
+            transition_style: 过渡风格 ('text', 'fade', 'blur', 'zoom', 'gradient', 'ai_generated')
             duration: 过渡时长（秒）
+            enable_ai: 是否启用 AI 过渡 (阶段二功能)
+            ai_config: AI 过渡配置 (可选)
         """
         if transition_style not in self.SUPPORTED_STYLES:
             raise ValueError(
@@ -83,11 +97,43 @@ class TransitionGenerator:
         self.duration = duration
         self.moviepy_available = MOVIEPY_AVAILABLE
 
+        # AI 过渡生成器 (阶段二)
+        self.ai_generator = None
+        self.ai_available = False
+
+        if enable_ai and transition_style == "ai_generated":
+            self._init_ai_generator(ai_config)
+
+    def _init_ai_generator(self, ai_config: Optional[TransitionConfig] = None):
+        """初始化 AI 过渡生成器"""
+        if not AI_TRANSITION_AVAILABLE:
+            print("警告: AI 过渡不可用 (未安装依赖)")
+            print("请安装: pip install torch diffusers transformers accelerate")
+            print("降级到简单文字过渡")
+            self.style = "text"
+            return
+
+        try:
+            self.ai_generator = AITransitionGenerator(
+                config=ai_config,
+                enable_gpu=True,
+                verbose=True
+            )
+            self.ai_available = True
+            print("✓ AI 过渡生成器已启用")
+        except Exception as e:
+            print(f"警告: AI 过渡初始化失败: {e}")
+            print("降级到简单文字过渡")
+            self.style = "text"
+            self.ai_available = False
+
     def create_transition(
         self,
         text: Optional[str] = None,
         size: Tuple[int, int] = (1920, 1080),
         template: str = "default",
+        prompt_start: Optional[str] = None,
+        prompt_end: Optional[str] = None,
         **kwargs
     ):
         """
@@ -97,11 +143,20 @@ class TransitionGenerator:
             text: 过渡文字（用于文字类过渡）
             size: 视频尺寸 (宽, 高)
             template: 文字模板名称
+            prompt_start: AI 过渡起始提示词 (仅用于 ai_generated)
+            prompt_end: AI 过渡结束提示词 (仅用于 ai_generated)
             **kwargs: 额外参数
 
         Returns:
             过渡视频片段
         """
+        # AI 过渡 (阶段二)
+        if self.style == "ai_generated":
+            return self._create_ai_transition(
+                prompt_start, prompt_end, size, **kwargs
+            )
+
+        # 传统过渡
         if not self.moviepy_available:
             raise ImportError(
                 "请安装依赖: pip install moviepy pillow scipy"
@@ -121,6 +176,67 @@ class TransitionGenerator:
             return self._create_gradient_transition(size, **kwargs)
         else:
             raise ValueError(f"不支持的过渡类型: {self.style}")
+
+    def _create_ai_transition(
+        self,
+        prompt_start: Optional[str],
+        prompt_end: Optional[str],
+        size: Tuple[int, int],
+        **kwargs
+    ):
+        """创建 AI 生成的过渡 (阶段二)
+
+        使用 latent blending 技术生成平滑的 AI 过渡效果
+        """
+        if not self.ai_available or self.ai_generator is None:
+            print("警告: AI 过渡不可用，降级到淡入淡出")
+            return self._create_fade_transition(size)
+
+        # 验证提示词
+        if not prompt_start or not prompt_end:
+            raise ValueError("AI 过渡需要提供 prompt_start 和 prompt_end")
+
+        try:
+            import numpy as np
+
+            # 计算帧数 (基于持续时间和 FPS)
+            fps = kwargs.get('fps', 30)
+            num_frames = int(self.duration * fps)
+
+            # 生成 AI 过渡帧
+            print(f"生成 AI 过渡: {num_frames} 帧...")
+            frames = self.ai_generator.generate_transition(
+                prompt_start=prompt_start,
+                prompt_end=prompt_end,
+                num_frames=num_frames
+            )
+
+            # 将 PIL 图像转换为 MoviePy ImageClip 序列
+            clips = []
+            frame_duration = 1.0 / fps
+
+            for i, frame in enumerate(frames):
+                # 调整图像大小到目标尺寸
+                if frame.size != size:
+                    frame = frame.resize(size, Image.LANCZOS)
+
+                # 转换为 numpy 数组
+                frame_array = np.array(frame)
+
+                # 创建 ImageClip
+                img_clip = ImageClip(frame_array).set_duration(frame_duration)
+                clips.append(img_clip)
+
+            # 拼接所有帧
+            from moviepy.editor import concatenate_videoclips
+            final_clip = concatenate_videoclips(clips, method="compose")
+
+            return final_clip
+
+        except Exception as e:
+            print(f"AI 过渡生成失败: {e}")
+            print("降级到淡入淡出")
+            return self._create_fade_transition(size)
 
     def _create_text_transition(
         self,

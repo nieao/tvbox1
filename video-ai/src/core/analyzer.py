@@ -22,6 +22,13 @@ try:
 except ImportError:
     NLP_AVAILABLE = False
 
+# 导入场景检测器
+try:
+    from .scene_detector import SceneDetector, Scene
+    SCENE_DETECTOR_AVAILABLE = True
+except ImportError:
+    SCENE_DETECTOR_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -126,6 +133,7 @@ class AnalysisResult:
     summary: str
     keywords: List[str]
     sentiment: str  # positive, negative, neutral
+    scenes: Optional[List['Scene']] = None  # 场景信息
 
 
 class ContentAnalyzer:
@@ -137,7 +145,9 @@ class ContentAnalyzer:
         api_provider: str = "openai",
         api_key: Optional[str] = None,
         model: Optional[str] = None,
-        use_llm: bool = True
+        use_llm: bool = True,
+        use_scene_detection: bool = True,
+        scene_detection_method: str = "hybrid"
     ):
         """
         初始化内容分析器
@@ -148,9 +158,13 @@ class ContentAnalyzer:
             api_key: API密钥
             model: 模型名称
             use_llm: 是否使用LLM进行深度分析
+            use_scene_detection: 是否启用场景检测
+            scene_detection_method: 场景检测方法 (frame_diff, histogram, motion, hybrid)
         """
         self.use_llm = use_llm
         self.llm_provider = llm_provider
+        self.use_scene_detection = use_scene_detection
+        self.scene_detector = None
 
         # 如果没有提供LLM实例但启用了LLM,则创建一个
         if self.use_llm and not self.llm_provider:
@@ -165,12 +179,20 @@ class ContentAnalyzer:
                 logger.warning("未提供API密钥,将使用基础分析模式")
                 self.use_llm = False
 
+        # 初始化场景检测器
+        if self.use_scene_detection and SCENE_DETECTOR_AVAILABLE:
+            self.scene_detector = SceneDetector(method=scene_detection_method)
+            logger.info(f"初始化场景检测器: 方法={scene_detection_method}")
+        elif self.use_scene_detection:
+            logger.warning("场景检测模块不可用")
+
     def analyze(
         self,
         transcript,
         user_interests: Optional[List[str]] = None,
         skip_topics: Optional[List[str]] = None,
-        max_segments: int = 10
+        max_segments: int = 10,
+        video_path: Optional[str] = None
     ) -> AnalysisResult:
         """
         分析转录内容
@@ -180,15 +202,26 @@ class ContentAnalyzer:
             user_interests: 用户兴趣列表
             skip_topics: 要跳过的主题列表
             max_segments: 最大返回片段数
+            video_path: 视频文件路径(可选，用于场景检测)
 
         Returns:
             AnalysisResult对象
         """
         logger.info("开始分析视频内容...")
 
+        # 进行场景检测（如果提供了视频路径）
+        scenes = None
+        if self.use_scene_detection and self.scene_detector and video_path:
+            try:
+                logger.info("  检测视频场景...")
+                scenes = self.scene_detector.detect_scenes(video_path)
+                logger.info(f"  检测到 {len(scenes)} 个场景")
+            except Exception as e:
+                logger.warning(f"场景检测失败: {e}")
+
         if self.use_llm and self.llm_provider:
             # 使用LLM进行深度分析
-            return asyncio.run(
+            result = asyncio.run(
                 self._analyze_with_llm_async(
                     transcript,
                     user_interests,
@@ -198,12 +231,17 @@ class ContentAnalyzer:
             )
         else:
             # 使用基础NLP分析
-            return self._analyze_basic(
+            result = self._analyze_basic(
                 transcript,
                 user_interests,
                 skip_topics,
                 max_segments
             )
+
+        # 添加场景信息
+        result.scenes = scenes
+
+        return result
 
     def _analyze_basic(
         self,

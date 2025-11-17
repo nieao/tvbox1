@@ -4,6 +4,7 @@ from .transcriber import VideoTranscriber, Transcript, TranscriptSegment
 from .analyzer import ContentAnalyzer, AnalysisResult, KeySegment
 from .editor import VideoEditor, EditingResult
 from .generator import TransitionGenerator
+from .quality_analyzer import QualityAnalyzer, QualityMetrics
 
 __all__ = [
     "VideoTranscriber",
@@ -15,4 +16,6 @@ __all__ = [
     "VideoEditor",
     "EditingResult",
     "TransitionGenerator",
+    "QualityAnalyzer",
+    "QualityMetrics",
 ]
