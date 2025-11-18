@@ -34,6 +34,12 @@ try:
 except ImportError:
     ANTHROPIC_AVAILABLE = False
 
+try:
+    import httpx
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    OLLAMA_AVAILABLE = False
+
 
 logger = logging.getLogger(__name__)
 
@@ -335,6 +341,85 @@ class ClaudeProvider(LLMProvider):
         return self._parse_json_fallback(response_text, schema)
 
 
+class OllamaProvider(LLMProvider):
+    """Ollama 本地模型提供商"""
+
+    def __init__(self, config: LLMConfig):
+        super().__init__(config)
+
+        if not OLLAMA_AVAILABLE:
+            raise ImportError("请安装 httpx: pip install httpx>=0.24.0")
+
+        # Ollama 默认运行在 localhost:11434
+        # api_key 字段在这里用作 base_url（如果为空则使用默认值）
+        self.base_url = config.api_key if config.api_key and config.api_key != "not-required" else "http://localhost:11434"
+        self.client = httpx.AsyncClient(timeout=config.timeout)
+        self.logger.info(f"初始化 Ollama 提供商,模型: {config.model}, 地址: {self.base_url}")
+
+    async def _call_api(self, prompt: str, **kwargs) -> str:
+        """调用 Ollama API"""
+        url = f"{self.base_url}/api/generate"
+
+        payload = {
+            "model": self.config.model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": kwargs.get('temperature', self.config.temperature),
+                "num_predict": kwargs.get('max_tokens', self.config.max_tokens),
+            }
+        }
+
+        try:
+            response = await self.client.post(url, json=payload)
+            response.raise_for_status()
+            result = response.json()
+            return result.get("response", "")
+        except httpx.HTTPStatusError as e:
+            self.logger.error(f"Ollama API 错误: {e}")
+            raise
+        except Exception as e:
+            self.logger.error(f"调用 Ollama 失败: {e}")
+            raise
+
+    async def generate(self, prompt: str, **kwargs) -> str:
+        """生成文本"""
+        self.logger.debug(f"生成文本,提示词长度: {len(prompt)}")
+        return await self._retry_with_backoff(self._call_api, prompt, **kwargs)
+
+    async def generate_json(self, prompt: str, schema: Optional[Dict] = None, **kwargs) -> dict:
+        """生成JSON"""
+        # 添加JSON格式指令
+        json_prompt = f"""{prompt}
+
+请以有效的JSON格式返回结果。"""
+
+        if schema:
+            json_prompt += f"""
+
+期望的JSON结构:
+{json.dumps(schema, indent=2, ensure_ascii=False)}"""
+
+        json_prompt += """
+
+重要:只返回JSON对象,不要包含任何其他文字、解释或markdown标记。"""
+
+        self.logger.debug(f"生成JSON,提示词长度: {len(json_prompt)}")
+
+        response_text = await self._retry_with_backoff(self._call_api, json_prompt, **kwargs)
+
+        # 解析JSON
+        return self._parse_json_fallback(response_text, schema)
+
+    async def __aenter__(self):
+        """异步上下文管理器入口"""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """异步上下文管理器出口，关闭 HTTP 客户端"""
+        await self.client.aclose()
+
+
 class LLMFactory:
     """LLM工厂类"""
 
@@ -344,6 +429,7 @@ class LLMFactory:
         "gemini": GeminiProvider,
         "claude": ClaudeProvider,
         "anthropic": ClaudeProvider,  # 别名
+        "ollama": OllamaProvider,
     }
 
     @classmethod
@@ -384,6 +470,7 @@ class LLMFactory:
                 "gemini": "gemini-pro",
                 "claude": "claude-3-sonnet-20240229",
                 "anthropic": "claude-3-sonnet-20240229",
+                "ollama": "qwen2.5:7b",  # Ollama 默认模型
             }
             model = default_models.get(provider)
 
